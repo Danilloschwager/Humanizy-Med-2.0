@@ -1,350 +1,402 @@
-<<<<<<< HEAD
-<h1>Humanizy Med</h1>
+<div align="center">
 
-Humanizy Med é um chatbot inteligente desenvolvido para auxiliar usuários com informações médicas gerais e orientação básica sobre saúde.
+# Humanizy Med
 
-### 🎯 Nossa Missão
+**Assistente inteligente para orientação em saúde, desenvolvido com FastAPI e integração com modelos de linguagem.**
 
-A Humanizy Med nasceu com o propósito de aproximar a tecnologia da saúde de forma acessível, empática e inteligente.
-Nossa missão é oferecer informações médicas confiáveis e suporte rápido para quem busca orientação sobre bem-estar e primeiros cuidados, sempre com o toque humano que a tecnologia deve ter.
+<p>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
+  </a>
+  <a href="https://fastapi.tiangolo.com/">
+    <img src="https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
+  </a>
+  <a href="https://groq.com/">
+    <img src="https://img.shields.io/badge/Groq-LLM-111111?style=flat-square" alt="Groq">
+  </a>
+  <a href="https://www.openstreetmap.org/">
+    <img src="https://img.shields.io/badge/Nominatim-Geolocalização-7EBC6F?style=flat-square" alt="Nominatim">
+  </a>
+  <a href="https://pytest.org/">
+    <img src="https://img.shields.io/badge/Pytest-Testes-0A9EDC?style=flat-square&logo=pytest&logoColor=white" alt="Pytest">
+  </a>
+</p>
 
-> ⚠️ Este projeto **não substitui atendimento médico**. O assistente é orientado, por prompt, a nunca diagnosticar ou prescrever — apenas indicar o tipo de especialista mais adequado.
+</div>
 
 ---
-
-## 🏗️ Estrutura do projeto
-
-O backend é organizado em camadas (rotas → regras de negócio → integrações externas), em vez de um único arquivo:
-=======
-# Humanizy-Med-2.0
-
-# Arquitetura — Humanizy Med
-
-Este documento explica como o backend está organizado, por que cada decisão foi tomada e o
-que fica como próximo passo. Ele complementa o [README.md](../README.md), que foca em "como
-rodar"; aqui o foco é "como funciona e por quê".
 
 ## Visão geral
 
-O `Main.py` original concentrava em um único arquivo: configuração, prompt, chamada à IA,
-chamada de geolocalização e a rota HTTP. Funcionava, mas qualquer mudança (trocar de provedor
-de IA, adicionar um teste, adicionar uma segunda rota) exigia mexer no mesmo arquivo que faz
-tudo. A reestruturação separa isso em camadas com responsabilidade única:
->>>>>>> d4fa4e493555d83f3773026e9a5346df42ab3a76
+O **Humanizy Med** é uma aplicação backend voltada à orientação inicial em saúde. O sistema recebe uma descrição do usuário, processa a solicitação por meio de um modelo de linguagem, identifica a especialidade mais adequada e, quando uma cidade é informada, pode consultar estabelecimentos relacionados à especialidade indicada.
 
+> **Aviso:** o sistema não substitui atendimento médico. A aplicação foi estruturada para fornecer orientação geral e indicar uma especialidade, sem realizar diagnóstico ou prescrição.
+
+---
+
+## Arquitetura
+
+A aplicação utiliza uma arquitetura em camadas para manter separadas as responsabilidades de HTTP, regras de negócio, contratos de dados e integrações externas.
+
+```mermaid
+flowchart TB
+    Client[Cliente\nWeb / Mobile / API Consumer]
+    API[FastAPI\nRotas + Validação]
+    Schema[Schema Pydantic\nContrato de Entrada/Saída]
+    Service[Services\nRegras de Negócio]
+    AI[Groq\nModelo de Linguagem]
+    Geo[Nominatim\nGeolocalização]
+    Cache[(Cache)]
+    Response[ChatResponse\nJSON estruturado]
+
+    Client --> API
+    API --> Schema
+    Schema --> Service
+    Service --> AI
+    Service --> Geo
+    Geo --> Cache
+    AI --> Response
+    Geo --> Response
+    Response --> API
+    API --> Client
 ```
+
+### Princípio da arquitetura
+
+As rotas HTTP não precisam conhecer a implementação do Groq ou do Nominatim. Elas trabalham com services e schemas, permitindo substituir uma integração externa sem reescrever toda a camada HTTP.
+
+---
+
+## Estrutura do projeto
+
+```text
 humanizy-med/
 ├── app/
-<<<<<<< HEAD
-│   ├── main.py                 # cria a app FastAPI e registra rotas/middlewares
-│   ├── config.py               # variáveis de ambiente (validadas no startup)
-│   ├── constants.py            # lista de especialistas
-│   ├── prompts.py              # prompt de sistema da IA
-│   ├── api/routes/             # camada HTTP (chat.py, health.py)
-│   ├── schemas/                # contratos de entrada/saída (Pydantic)
-│   └── services/                # integrações (Groq, Nominatim)
-├── tests/                       # testes automatizados (pytest)
-├── docs/ARQUITETURA.md          # decisões de arquitetura e roadmap, em detalhe
-└── .github/workflows/ci.yml     # lint + testes no CI
+│   ├── main.py                 # Inicialização da aplicação FastAPI
+│   ├── config.py               # Configurações e variáveis de ambiente
+│   ├── constants.py            # Lista de especialistas
+│   ├── prompts.py              # Prompt de sistema da IA
+│   ├── api/
+│   │   └── routes/
+│   │       ├── chat.py         # POST /chat
+│   │       └── health.py       # GET /health
+│   ├── schemas/
+│   │   └── chat.py             # Contratos Pydantic
+│   └── services/
+│       ├── ai_service.py       # Integração com Groq
+│       └── location_service.py # Integração com Nominatim
+├── tests/                      # Testes automatizados
+├── docs/                       # Documentação técnica
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # CI: lint + testes
+├── Dockerfile
+├── requirements.txt
+└── requirements-dev.txt
 ```
-
-Detalhes de cada decisão (por que camadas, por que clientes assíncronos, por que Structured
-Outputs em vez de regex etc.) estão em **[docs/ARQUITETURA.md](docs/ARQUITETURA.md)**.
 
 ---
 
-## ⚙️ Configuração e execução
+## Fluxo do `POST /chat`
 
-### Pré-requisitos
-- Python 3.10+
-- Uma chave de API do Groq → [console.groq.com/keys](https://console.groq.com/keys)
-
-### Passo a passo
-
-```bash
-# 1. Clonar e entrar na pasta
-git clone https://github.com/kauavcorreia/chatbot.git
-cd chatbot
-
-# 2. Criar e ativar um ambiente virtual
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# 3. Instalar dependências
-pip install -r requirements.txt
-
-# 4. Configurar variáveis de ambiente
-cp .env.example .env
-# edite o .env e preencha GROQ_API_KEY com sua chave real
-
-# 5. Rodar em modo desenvolvimento (recarrega automaticamente)
-uvicorn app.main:app --reload
+```text
+Cliente
+  │
+  ▼
+POST /chat
+  │
+  ▼
+ChatRequest (Pydantic)
+  │
+  ├── entrada inválida ──► 422
+  │
+  ▼
+ai_service
+  │
+  ▼
+Groq / Structured Outputs
+  │
+  ├── falha ──► 502
+  │
+  ▼
+Resultado estruturado
+  │
+  ├── especialista
+  ├── mensagem
+  └── emergencia
+  │
+  ├── cidade informada ──► location_service ──► Nominatim
+  │
+  ▼
+ChatResponse
 ```
-
-A API sobe em `http://localhost:8000`. A documentação interativa (Swagger) fica em
-`http://localhost:8000/docs`.
-
-### Variáveis de ambiente
-
-Todas as opções estão documentadas em [`.env.example`](.env.example). As mais relevantes:
-
-| Variável | Obrigatória | Padrão | Descrição |
-|---|---|---|---|
-| `GROQ_API_KEY` | ✅ | — | Chave de API do Groq. Sem ela a aplicação não sobe. |
-| `GROQ_MODEL` | não | `openai/gpt-oss-20b` | Modelo usado na triagem. |
-| `CORS_ORIGINS` | não | `http://localhost:3000` | Origens autorizadas a chamar a API, separadas por vírgula. |
-| `NOMINATIM_CONTACT_EMAIL` | não | — | Usado no `User-Agent` das chamadas ao Nominatim (exigido pela política de uso deles). |
 
 ---
 
-## 📡 Endpoints da API
+## API
 
 ### `POST /chat`
 
+#### Request
+
 ```json
-// Requisição
 {
   "message": "Estou com dor de garganta e febre há dois dias",
-  "cidade": "Natal"          // opcional — se omitido, "locais" volta vazio
+  "cidade": "Natal"
 }
 ```
 
+#### Response
+
 ```json
-// Resposta 200
 {
   "mensagem": "Pelo que você descreveu, o ideal é procurar um otorrinolaringologista...",
   "especialista": "otorrinolaringologista",
   "emergencia": false,
   "locais": [
-    { "nome": "Clínica Exemplo", "lat": "-5.79", "lng": "-35.21", "endereco": "..." }
+    {
+      "nome": "Clínica Exemplo",
+      "lat": "-5.79",
+      "lng": "-35.21",
+      "endereco": "..."
+    }
   ]
 }
 ```
 
-| Código | Quando acontece |
+### Status codes
+
+| Código | Significado |
 |---|---|
-| `200` | Triagem concluída (com ou sem locais, dependendo de `cidade`). |
-| `422` | `message` vazio/ausente ou corpo inválido. |
-| `502` | Falha ao consultar o serviço de IA. |
+| `200` | Triagem concluída |
+| `422` | Corpo ou mensagem inválida |
+| `502` | Falha na integração com a IA |
 
 ### `GET /health`
 
-Retorna `{"status": "ok"}` — usado por monitoramento e orquestradores (Docker/Kubernetes).
+Endpoint utilizado para health checks e monitoramento.
+
+```json
+{
+  "status": "ok"
+}
+```
 
 ---
 
-## 🧪 Testes
+## Decisões técnicas
+
+### Structured Outputs
+
+Em vez de analisar o texto retornado pela IA procurando palavras-chave, o serviço utiliza uma saída estruturada. Dessa forma, campos como `especialista` e `emergencia` possuem formato previsível.
+
+Exemplo do problema da abordagem anterior:
+
+```python
+tipo_encontrado = next(
+    (e for e in especialistas if e in resposta_texto.lower()),
+    "clínico geral"
+)
+```
+
+Esse modelo depende da ordem da lista e do conteúdo textual gerado pelo modelo.
+
+A abordagem atual trabalha com um contrato estruturado, reduzindo a necessidade de parsing manual.
+
+```python
+response_format = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "medical_triage",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "mensagem": {"type": "string"},
+                "especialista": {
+                    "type": "string",
+                    "enum": ESPECIALISTAS
+                },
+                "emergencia": {"type": "boolean"}
+            },
+            "required": [
+                "mensagem",
+                "especialista",
+                "emergencia"
+            ],
+            "additionalProperties": False
+        }
+    }
+}
+```
+
+### Processamento assíncrono
+
+As integrações externas utilizam clientes assíncronos para evitar bloqueio do event loop do FastAPI durante chamadas de rede.
+
+```python
+from groq import AsyncGroq
+import httpx
+
+client = AsyncGroq(api_key=settings.groq_api_key)
+
+async with httpx.AsyncClient() as http:
+    response = await http.get(url, params=params)
+```
+
+### Falha isolada de integração
+
+A integração com a IA é considerada parte central do fluxo. Já a geolocalização possui degradação graciosa: se a busca de locais falhar, a triagem ainda pode ser retornada com `locais: []`.
+
+---
+
+## Configuração
+
+### Pré-requisitos
+
+- Python 3.10+
+- Chave da API do Groq
+
+### Instalação
+
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd humanizy-med
+
+python -m venv .venv
+
+# Linux / macOS
+source .venv/bin/activate
+
+# Windows
+.venv\Scripts\activate
+
+pip install -r requirements.txt
+```
+
+### Variáveis de ambiente
+
+Crie um `.env` a partir do arquivo de exemplo:
+
+```bash
+cp .env.example .env
+```
+
+Principais variáveis:
+
+| Variável | Obrigatória | Descrição |
+|---|---:|---|
+| `GROQ_API_KEY` | Sim | Chave utilizada para acessar a API do Groq |
+| `GROQ_MODEL` | Não | Modelo utilizado na triagem |
+| `CORS_ORIGINS` | Não | Origens autorizadas pela API |
+| `NOMINATIM_CONTACT_EMAIL` | Não | E-mail usado nas requisições ao Nominatim |
+
+> Nunca publique um arquivo `.env` contendo credenciais reais no GitHub.
+
+### Execução
+
+```bash
+uvicorn app.main:app --reload
+```
+
+A API fica disponível em:
+
+```text
+http://localhost:8000
+```
+
+Swagger:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+## Testes
+
+As integrações externas são mockadas nos testes, evitando chamadas reais para o Groq e o Nominatim.
 
 ```bash
 pip install -r requirements-dev.txt
 pytest -v
 ```
 
-Os testes mockam o Groq e o Nominatim (não fazem chamadas reais de rede nem consomem sua
-cota de API). O CI (`.github/workflows/ci.yml`) roda lint (`ruff`) e os testes a cada push/PR.
+O pipeline de CI executa lint e testes automatizados a cada push/PR.
 
 ---
 
-## 🐳 Docker
+## Docker
+
+### Build
 
 ```bash
 docker build -t humanizy-med .
+```
+
+### Execução
+
+```bash
 docker run -p 8000:8000 --env-file .env humanizy-med
 ```
 
 ---
 
-## 🚀 Tecnologias Utilizadas
+## Stack
 
-O projeto Humanizy Med foi desenvolvido com foco em desempenho, simplicidade e integração com inteligência artificial
-As principais tecnologias utilizadas incluem
-
-🐍 Python – linguagem principal do projeto
-
-⚡ FastAPI – framework moderno e rápido para criação de APIs
-
-🧠 Groq API – processamento de linguagem natural e respostas inteligentes (via cliente assíncrono `AsyncGroq`)
-
-🌐 httpx – cliente HTTP assíncrono para a integração com o Nominatim
-
-🔧 pydantic-settings – configuração validada a partir de variáveis de ambiente
-
-🔑 dotenv – gerenciamento de variáveis de ambiente
-
-🚀 Uvicorn – servidor leve e eficiente para rodar a aplicação
-
-🧰 Git e GitHub – versionamento e colaboração do código
-
-🧪 Postman – testes e validação das rotas da API
-
-🎨 HTML, CSS e JavaScript – interface simples e responsiva
+| Tecnologia | Responsabilidade |
+|---|---|
+| Python | Linguagem principal |
+| FastAPI | API HTTP |
+| Pydantic | Validação e contratos |
+| Groq | Modelo de linguagem |
+| httpx | Cliente HTTP assíncrono |
+| Nominatim | Busca de localização |
+| Uvicorn | Servidor ASGI |
+| Pytest | Testes automatizados |
+| Ruff | Lint |
+| Docker | Empacotamento e execução |
+| GitHub Actions | Integração contínua |
 
 ---
 
-## 💬 Comunidade e Suporte
+## Roadmap técnico
 
-Junte-se às nossas discussões da comunidade no GitHub para compartilhar ideias, fazer perguntas ou sugerir melhorias. Vamos construir algo incrível juntos!
+<details>
+<summary><strong>Próximos passos</strong></summary>
 
-[![Abrir Issues](https://img.shields.io/badge/Abrir%20Issues-blue?style=for-the-badge&logo=github)](https://github.com/kauavcorreia/chatbot/issues)
+<br>
 
-Use o espaço de *issues* para relatar bugs, sugerir melhorias ou tirar dúvidas sobre o projeto 💬
+- Rate limiting no endpoint `/chat`.
+- Logging estruturado.
+- Histórico e persistência de conversas.
+- Autenticação para consumidores externos da API.
+- Métricas de latência e erro por integração.
+- Cache compartilhado com Redis para múltiplas instâncias.
+- Avaliação de provedores de geolocalização conforme crescimento do volume.
+- Revisão de requisitos de privacidade e LGPD para o fluxo de dados.
+
+</details>
+
+---
+
+## Segurança e responsabilidade
+
+O projeto trata informações relacionadas a sintomas e orientação de saúde. Por isso, desenvolvimento e operação devem considerar controle de acesso, proteção de credenciais, retenção de dados, observabilidade e requisitos aplicáveis de privacidade.
+
+A aplicação não deve ser apresentada como substituta de um profissional de saúde, nem como ferramenta de diagnóstico ou prescrição.
 
 ---
 
-## 👥 Contribuidores
+## Licença
 
-Agradecimento especial a todas as pessoas incríveis que contribuíram para este projeto 💙
+Este projeto é disponibilizado sob a licença MIT.
 
-<a href="https://github.com/kauavcorreia/chatbot/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=kauavcorreia/chatbot" />
-</a>
-
-## 📄 Licença
-
-Este projeto é open-source e está disponível sob a Licença MIT. Sinta-se livre para usar, modificar e distribuir para projetos pessoais ou comerciais.
-
----
 <div align="center">
-  <p>Feito com ❤️ por <a href="https://github.com/marconi-prog">Marconi Farias</a></p>
+
+---
+
+**Humanizy Med**  
+*Tecnologia aplicada à orientação em saúde.*
+
 </div>
-=======
-│   ├── main.py              # monta a app FastAPI e registra middlewares/rotas
-│   ├── config.py            # Settings (variáveis de ambiente), validado no startup
-│   ├── constants.py         # lista de especialistas (fonte única de verdade)
-│   ├── prompts.py           # prompt de sistema da IA
-│   ├── api/routes/          # camada HTTP — só recebe/valida request e devolve response
-│   │   ├── chat.py          # POST /chat
-│   │   └── health.py        # GET /health
-│   ├── schemas/              # contratos de entrada/saída (Pydantic)
-│   │   └── chat.py
-│   └── services/              # regras de negócio e integrações externas
-│       ├── ai_service.py     # Groq (triagem estruturada)
-│       └── location_service.py  # Nominatim (busca de locais)
-├── tests/                    # testes automatizados (pytest), com as integrações mockadas
-├── docs/ARQUITETURA.md       # este arquivo
-├── .github/workflows/ci.yml  # lint + testes a cada push/PR
-├── Dockerfile
-├── requirements.txt          # dependências de produção
-└── requirements-dev.txt      # + pytest, ruff (não vai para produção)
-```
-
-A regra prática: **rotas não sabem como o Groq ou o Nominatim funcionam** — elas só chamam
-`ai_service.gerar_resposta(...)` ou `location_service.buscar_especialistas(...)` e traduzem o
-resultado (ou o erro) em uma resposta HTTP. Isso significa que trocar de provedor de IA no
-futuro, por exemplo, é uma mudança isolada em `ai_service.py`.
-
-## Fluxo de uma requisição `POST /chat`
-
-1. FastAPI valida o corpo da requisição contra `ChatRequest` (schema). Mensagem vazia já é
-   rejeitada aqui com `422`, antes de gastar uma chamada à IA.
-2. `api/routes/chat.py` chama `ai_service.gerar_resposta(mensagem)`.
-3. `ai_service` chama o Groq pedindo uma resposta em **Structured Outputs / modo estrito**: o
-   modelo é obrigado (por decodificação restrita) a devolver um JSON com `mensagem`,
-   `especialista` (dentro de um enum fechado) e `emergencia`. Não há mais "adivinhação" por
-   busca de texto.
-4. Se a cidade foi informada, `location_service.buscar_especialistas(...)` consulta o
-   Nominatim (com cache) para aquele especialista + cidade.
-5. A rota monta o `ChatResponse` final. Se a IA falhar, a requisição inteira falha (`502`) —
-   sem triagem não há o que responder. Se **só** a geolocalização falhar, a triagem ainda é
-   devolvida normalmente, com `locais: []` (degradação graciosa: um provedor externo instável
-   não deveria derrubar a funcionalidade principal).
-
-## Por que Structured Outputs em vez de buscar palavras na resposta
-
-O código original pedia texto livre para a IA e depois procurava, por substring, qual
-especialista da lista aparecia na resposta:
-
-```python
-tipo_encontrado = next((e for e in especialistas if e in resposta_texto.lower()), "clínico geral")
-```
-
-Isso tem um bug sutil: a busca percorre a lista `ESPECIALISTAS` **na ordem em que ela foi
-declarada**, não na ordem em que os termos aparecem no texto da IA. Um texto como *"não é
-cardiologista, e sim dermatologista"* seria classificado como `cardiologista`, porque essa
-palavra aparece primeiro na lista interna — mesmo que o especialista certo, segundo o próprio
-texto, seja outro. Também é sensível a acentuação e pode confundir substrings.
-
-A troca para `response_format` com `json_schema` + `strict: true` (suportado pelos modelos
-`openai/gpt-oss-20b`/`120b` no Groq) resolve isso na raiz: o `especialista` é restrito por um
-`enum` no schema, então a própria IA só pode retornar um dos valores válidos — não há mais
-parsing de texto livre para o especialista. De brinde, isso também permitiu adicionar o campo
-`emergencia` (booleano) de forma confiável, algo que seria ainda mais frágil de extrair de um
-texto livre.
-
-Referência: <https://console.groq.com/docs/structured-outputs>
-
-## Decisões de arquitetura (resumo)
-
-| Decisão | Por quê |
-|---|---|
-| `AsyncGroq` + `httpx.AsyncClient` em vez de `Groq` + `requests` | O `Main.py` original chamava bibliotecas **síncronas** dentro de uma rota `async def`. Isso bloqueia o event loop do FastAPI: enquanto uma requisição espera o Groq ou o Nominatim responder, o processo inteiro fica preso e não atende mais ninguém. Com clientes assíncronos, o servidor continua atendendo outras requisições nesse meio-tempo. |
-| `pydantic-settings` com `groq_api_key: str` obrigatório | *Fail fast*: se a variável de ambiente não existir, a aplicação recusa subir, com um erro claro. Antes, o erro só apareceria (de forma confusa) na primeira mensagem de um usuário real. |
-| Erros tratados em cada service (`AIServiceError`, `LocationServiceError`) | O código original não tinha nenhum `try/except` ao redor das chamadas externas — qualquer instabilidade de rede vira um `500` genérico para o usuário. Agora cada falha vira uma exceção de domínio, tratada explicitamente na rota. |
-| Cache em memória no `location_service` | O Nominatim é um serviço público mantido por doações, com política de uso restrita a **1 requisição/segundo** e que exige cache do lado do cliente. Ver <https://operations.osmfoundation.org/policies/nominatim/>. |
-| Validação de entrada no schema (`min_length`, strip) | Deixa o FastAPI devolver `422` automaticamente para entradas inválidas, em vez de checar `if not mensagem.strip()` manualmente dentro da rota e devolver `200` com uma mensagem de erro dentro do corpo. |
-
-## O que muda para quem já usava o `Main.py`
-
-| Antes (`Main.py`) | Agora |
-|---|---|
-| `Groq(...)` síncrono | `AsyncGroq(...)` em `app/services/ai_service.py` |
-| `requests.get(...)` síncrono | `httpx.AsyncClient` em `app/services/location_service.py` |
-| Prompt inline no `Main.py` | `app/prompts.py` |
-| Lista `especialistas` inline | `app/constants.py` |
-| Tudo em uma função `chat()` | `api/routes/chat.py` (HTTP) chamando `services/` (regra de negócio) |
-| Sem testes | `tests/` com Groq e Nominatim mockados (não bate na rede) |
-| `model="llama-3.1-8b-instant"` | `model="openai/gpt-oss-20b"` (ver seção abaixo) |
-
-## ⚠️ Migração de modelo urgente
-
-O modelo usado no `Main.py` original, `llama-3.1-8b-instant`, está na
-[página de descontinuações do Groq](https://console.groq.com/docs/deprecations) com
-**desligamento em 16/08/2026** — ou seja, chamadas a esse `model=` param passam a devolver
-erro a partir dessa data. O substituto recomendado oficialmente pelo Groq é
-`openai/gpt-oss-20b`, que já é o padrão configurado em `app/config.py`. Se você clonar este
-projeto depois dessa data, não precisa fazer nada; se for aplicar só parte dessas mudanças no
-seu `Main.py` atual, troque o `model=` primeiro — é a mudança de maior urgência aqui.
-
-## Roadmap sugerido (por prioridade)
-
-### Já aplicado nesta reestruturação
-- Clientes assíncronos ponta a ponta (Groq e Nominatim)
-- Migração para `openai/gpt-oss-20b` + Structured Outputs
-- Configuração *fail-fast* com `pydantic-settings`
-- Tratamento de erro com degradação graciosa
-- Cache simples para o Nominatim
-- Testes automatizados + CI (lint e testes a cada PR)
-- `Dockerfile` para empacotar a aplicação
-
-### Curto prazo (baixo esforço, alto impacto)
-- Restringir `CORS_ORIGINS` para os domínios reais do frontend em produção (hoje o padrão é
-  só `localhost`, o que já é mais seguro que `["*"]`, mas precisa ser configurado por
-  ambiente).
-- Rate limiting no `/chat` (ex.: [`slowapi`](https://github.com/laurentS/slowapi)) para
-  evitar abuso e custo inesperado de API.
-- Logging estruturado (ex.: `structlog`) em vez de `print`/logging básico.
-
-### Médio prazo
-- Histórico de conversa: hoje cada mensagem é tratada isoladamente; um chat "de verdade"
-  normalmente mantém contexto entre turnos (exigiria persistir sessão/histórico).
-- Autenticação por API key para consumidores da API (se o frontend não for o único cliente).
-- Observabilidade: métricas de latência/erro por dependência externa (Groq, Nominatim).
-- Avaliar a [LGPD](https://www.gov.br/anpd) para o fluxo: mensagens sobre sintomas são dado
-  pessoal sensível (art. 5º, II), o que impõe requisitos de tratamento, retenção e consentimento.
-  Isso é uma constatação, não uma opinião jurídica — vale revisão com quem cuida da parte legal
-  do projeto.
-
-### Longo prazo / infraestrutura
-- Cache compartilhado (Redis) em vez de cache em memória por processo, necessário assim que
-  a aplicação rodar com mais de um worker/instância.
-- Avaliar um provedor de geocodificação pago (Google Places, LocationIQ, Geoapify) se o volume
-  de uso crescer além do que a política gratuita do Nominatim comporta.
-
-## Referências
-
-- Groq — Structured Outputs: <https://console.groq.com/docs/structured-outputs>
-- Groq — Descontinuação de modelos: <https://console.groq.com/docs/deprecations>
-- Groq — SDK Python (`AsyncGroq`): <https://github.com/groq/groq-python>
-- Nominatim — Política de uso: <https://operations.osmfoundation.org/policies/nominatim/>
-- FastAPI — Documentação oficial: <https://fastapi.tiangolo.com/>
->>>>>>> d4fa4e493555d83f3773026e9a5346df42ab3a76
